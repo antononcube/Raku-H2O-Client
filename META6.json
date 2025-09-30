@@ -1,0 +1,36 @@
+{
+  "name": "H2O::Client",
+  "description": "Client for the open-source, distributed in-memory machine learning platform H2O (https://h2o.ai).",
+  "version": "0.0.1",
+  "perl": "6.*",
+  "authors": [
+    "Anton Antonov"
+  ],
+  "auth": "zef:antononcube",
+  "depends": [
+    "JSON::Fast:ver<0.17+>",
+    "LLM::Functions:ver<0.4.1+>",
+    "LLM::Prompts:ver<0.2.5+>",
+    "Text::SubParsers:ver<0.1.2+>",
+    "Graph:ver<0.0.30+>",
+    "Hash::Merge:ver<2.0.0>:api<2>"
+  ],
+  "build-depends": [],
+  "test-depends": [],
+  "provides": {
+    "H2O::Client": "lib/H2O/Client.rakumod"
+  },
+  "resources": [],
+  "license": "Apache-License-2.0",
+  "tags": [
+    "ai",
+    "h2o",
+    "h2o 3 rest api",
+    "h2o.ai",
+    "api",
+    "rest service",
+    "rest"
+  ],
+  "api": "0",
+  "source-url": "https://github.com/antononcube/Raku-H2O-Client"
+}

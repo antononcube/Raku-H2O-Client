@@ -18,7 +18,8 @@
   "build-depends": [],
   "test-depends": [],
   "provides": {
-    "H2O::Client": "lib/H2O/Client.rakumod"
+    "H2O::Client": "lib/H2O/Client.rakumod",
+    "H2O::Client::Connector": "lib/H2O/Client/Connector.rakumod"
   },
   "resources": [],
   "license": "Apache-License-2.0",

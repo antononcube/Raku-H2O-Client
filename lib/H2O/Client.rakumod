@@ -3,9 +3,12 @@ use v6.d;
 use HTTP::Tiny;
 use JSON::Fast;
 use Hash::Merge;
+use H2O::Client::Connector;
+use Data::Translators;
 
 class H2O::Client {
     has $.base-url is required;
+    has H2O::Client::Connector $!conn handles <connect is-running shutdown>;
 
     submethod BUILD(:$!base-url = 'http://127.0.0.1:54321') {}
 
@@ -68,6 +71,93 @@ class H2O::Client {
     }
 
     #======================================================
-    # Specific methods
+    # Initialization
     #======================================================
+    method init(*%args) {
+        my $res = $!conn.init(|%args);
+        $!base-url = $!conn.base-url();
+        return $res;
+    }
+
+    #======================================================
+    # Queries
+    #======================================================
+
+    #| Jobs at the H2O cluster
+    method jobs(:f(:$format) is copy = Whatever) {
+        if $format.isa(Whatever) { $format = 'summary' }
+        die 'The argument format is expected to be Whatever or one of "asis", "dataset", "html" "summary".'
+        unless $format ~~ Str:D && $format.lc ∈ <asis dataset html jobs summary>;
+
+        my $res = self.get('3/Jobs');
+        die 'Unexpected 3/Jobs result.' unless $res ~~ Map:D;
+
+        return do given $format.lc {
+            when $_ eq 'asis' { $res }
+            when $_ ∈ <dataset jobs> { $_<models> }
+            when $_ eq 'summary'  {
+                $res<jobs>.map({
+                    my %h =
+                            merge-hash(
+                            merge-hash($_<key>.grep(*.key ne '__meta').Hash, %(dest_name => $_<dest><name>, dest_type => $_<dest><type>)),
+                                    $_.grep(*.key ∈ <status progress description start_time msec>).Hash);
+                    %h<start_time> = DateTime.new(%h<start_time>).hh-mm-ss;
+                    %h
+                }).Array
+            }
+            when $_ ∈ <html html-table> {
+                my $ds = self.jobs(format => 'summary');
+                to-html($ds, field-names => <name description status progress start_time msec dest_name dest_type type URL>)
+            }
+        }
+    }
+
+    #| Frames at the H2O cluster
+    method frames(:f(:$format) is copy = Whatever) {
+        if $format.isa(Whatever) { $format = 'summary' }
+        die 'The argument format is expected to be Whatever or one of "asis", "dataset", "html", "summary".'
+        unless $format ~~ Str:D && $format.lc ∈ <asis dataset frames html summary>;
+
+        my $res = self.get('3/Frames');
+        die 'Unexpected 3/Frames result.' unless $res ~~ Map:D;
+
+        return do given $format.lc {
+            when $_ eq 'asis' { $res }
+            when $_ ∈ <dataset frames> { $_<frames> }
+            when $_ eq 'summary' {
+                $res<frames>.map({ merge-hash($_<frame_id>, $_.grep(*.key ∈ <rows columns is_text>).Hash) }).Array
+            }
+            when $_ ∈ <html html-table> {
+                my $ds = self.frames(format => 'summary');
+                to-html($ds, field-names => <name rows columns is_text type URL>)
+            }
+        }
+    }
+
+    #| Models at the H2O cluster
+    method models(:f(:$format)  is copy = Whatever) {
+        if $format.isa(Whatever) { $format = 'summary' }
+        die 'The argument format is expected to be Whatever or one of "asis", "dataset", "html", "summary".'
+        unless $format ~~ Str:D && $format.lc ∈ <asis dataset html models summary>;
+
+        my $res = self.get('3/Models');
+        die 'Unexpected 3/Models result.' unless $res ~~ Map:D;
+
+        return do given $format.lc {
+            when $_ eq 'asis' { $res }
+            when $_ ∈ <dataset models> { $_<models> }
+            when $_ eq 'summary' {
+                $res<models>.map({
+                    merge-hash(
+                            merge-hash($_<model_id>.grep(*.key ne '__meta').Hash, %(data_frame => $_<data_frame><name>)),
+                            $_.grep(*.key ∈ <algo algo_full_name response_column_name have_mojo have_pojo>).Hash)
+                }).Array
+            }
+            when $_ ∈ <html html-table> {
+                my $ds = self.models(format => 'summary');
+                to-html($ds, field-names => <name algo algo_full_name data_frame response_column_name have_mojo have_pojo type URL>)
+            }
+        }
+    }
+
 }

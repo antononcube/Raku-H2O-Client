@@ -59,6 +59,8 @@ class H2O::Client {
         $path .= subst(/^ '/' /);
         my $url = "{$!base-url}/{$path}";
 
+        note (:$url) if $echo;
+
         my $res = HTTP::Tiny.post($url, headers => %(Content-Type => 'application/x-www-form-urlencoded'), :%content);
         $res = $res<content>.decode;
         try {
@@ -84,7 +86,13 @@ class H2O::Client {
     #======================================================
 
     #| Jobs at the H2O cluster
-    method jobs(:f(:$format) is copy = Whatever) {
+    proto method jobs(|) {*}
+
+    multi method jobs($format) {
+        return self.jobs(:$format)
+    }
+
+    multi method jobs(:f(:$format) is copy = Whatever) {
         if $format.isa(Whatever) { $format = 'summary' }
         die 'The argument format is expected to be Whatever or one of "asis", "dataset", "html" "summary".'
         unless $format ~~ Str:D && $format.lc ∈ <asis dataset html jobs summary>;
@@ -107,13 +115,19 @@ class H2O::Client {
             }
             when $_ ∈ <html html-table> {
                 my $ds = self.jobs(format => 'summary');
-                to-html($ds, field-names => <name description status progress start_time msec dest_name dest_type type URL>)
+                to-html($ds, field-names => <name description status progress start_time msec dest_name dest_type type URL>, align => 'left')
             }
         }
     }
 
     #| Frames at the H2O cluster
-    method frames(:f(:$format) is copy = Whatever) {
+    proto method frames(|) {*}
+
+    multi method frames($format) {
+        return self.frames(:$format)
+    }
+
+    multi method frames(:f(:$format) is copy = Whatever) {
         if $format.isa(Whatever) { $format = 'summary' }
         die 'The argument format is expected to be Whatever or one of "asis", "dataset", "html", "summary".'
         unless $format ~~ Str:D && $format.lc ∈ <asis dataset frames html summary>;
@@ -129,13 +143,19 @@ class H2O::Client {
             }
             when $_ ∈ <html html-table> {
                 my $ds = self.frames(format => 'summary');
-                to-html($ds, field-names => <name rows columns is_text type URL>)
+                to-html($ds, field-names => <name rows columns is_text type URL>, align => 'left')
             }
         }
     }
 
     #| Models at the H2O cluster
-    method models(:f(:$format)  is copy = Whatever) {
+    proto method models(|) {*}
+
+    multi method models($format) {
+        return self.models(:$format)
+    }
+
+    multi method models(:f(:$format)  is copy = Whatever) {
         if $format.isa(Whatever) { $format = 'summary' }
         die 'The argument format is expected to be Whatever or one of "asis", "dataset", "html", "summary".'
         unless $format ~~ Str:D && $format.lc ∈ <asis dataset html models summary>;
@@ -155,7 +175,7 @@ class H2O::Client {
             }
             when $_ ∈ <html html-table> {
                 my $ds = self.models(format => 'summary');
-                to-html($ds, field-names => <name algo algo_full_name data_frame response_column_name have_mojo have_pojo type URL>)
+                to-html($ds, field-names => <name algo algo_full_name data_frame response_column_name have_mojo have_pojo type URL>, align => 'left')
             }
         }
     }

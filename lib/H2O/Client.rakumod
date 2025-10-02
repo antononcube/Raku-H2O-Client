@@ -102,7 +102,7 @@ class H2O::Client {
 
         return do given $format.lc {
             when $_ eq 'asis' { $res }
-            when $_ ∈ <dataset jobs> { $_<models> }
+            when $_ ∈ <dataset jobs> { $res<jobs> }
             when $_ eq 'summary'  {
                 $res<jobs>.map({
                     my %h =
@@ -137,7 +137,7 @@ class H2O::Client {
 
         return do given $format.lc {
             when $_ eq 'asis' { $res }
-            when $_ ∈ <dataset frames> { $_<frames> }
+            when $_ ∈ <dataset frames> { $res<frames> }
             when $_ eq 'summary' {
                 $res<frames>.map({ merge-hash($_<frame_id>, $_.grep(*.key ∈ <rows columns is_text>).Hash) }).Array
             }
@@ -165,7 +165,7 @@ class H2O::Client {
 
         return do given $format.lc {
             when $_ eq 'asis' { $res }
-            when $_ ∈ <dataset models> { $_<models> }
+            when $_ ∈ <dataset models> { $res<models> }
             when $_ eq 'summary' {
                 $res<models>.map({
                     merge-hash(

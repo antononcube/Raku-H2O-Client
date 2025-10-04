@@ -5,6 +5,7 @@ use JSON::Fast;
 use Hash::Merge;
 use H2O::Client::Connector;
 use Data::Translators;
+use Data::Importers;
 
 class H2O::Client {
     has Str:D $.base-url is required;
@@ -186,7 +187,20 @@ class H2O::Client {
     #======================================================
     # Frames fundamental operations
     #======================================================
-    method data-import($path) {
+    multi method data-import(@data) {
+        # Dump into CSV
+        my $uniq = "{$*PID}-{now.DateTime}-{1_000_000_000.rand.Int}".subst(':','-'):g;
+        my $path = "$*TMPDIR/h2o_upload_$uniq.csv";
+        my $res = data-export($path, @data, 'csv');
+        die 'Cannot export the given data as a temporary CSV file.' unless $res;
+
+        # Frame import
+        $res = self.get('3/ImportFiles', %(:$path));
+        die 'Unexpected result by 3/ImportFiles.' unless $res ~~ Map:D;
+        return $res;
+    }
+
+    multi method data-import($path where $path.ID.f) {
         my $res = self.get('3/ImportFiles', %(:$path));
         die 'Unexpected result by 3/ImportFiles.' unless $res ~~ Map:D;
         return $res;

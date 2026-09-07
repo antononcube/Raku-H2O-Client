@@ -161,7 +161,7 @@ class H2O::Client {
         my $source = $uploaded<destination_frame><name> //
                      $uploaded<destination_frame> // $uploaded<key><name>;
         die 'H2O upload response did not contain a destination frame.' unless $source.defined;
-        my $setup = self.data-parse-setup([$source]);
+        my $setup = self.data-parse-setup([$source,]);
         my %props =
             destination_frame => ($destination-frame // "raku-{$*PID}-{now.Int}.hex"),
             source_frames => [($setup<source_frames> // []).head<name> // $source],

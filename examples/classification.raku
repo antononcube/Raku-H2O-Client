@@ -82,6 +82,8 @@ say to-pretty-table(@dsFrames);
 # Poll jobs
 #==========================================================
 
+say '=' x 100;
+say 'Jobs';
 my @dsJobs = $h2o.jobs('summary');
 say to-pretty-table(@dsJobs);
 
@@ -97,6 +99,8 @@ my %model-props =
 
 my $model-job = $h2o.model-build('drf', %model-props).wait;
 
+#====================================================================================================
+say '=' x 100;
 say "Models :";
 my @dsModels = $h2o.models('summary');
 
@@ -109,7 +113,14 @@ my $predictions = $h2o.model-predict(
     $model-id, $testing-frame.id, 'titanic-predictions.hex');
 
 say 'Prediction result';
-say $predictions.gist;
+.say for $predictions.preview;
 
+#====================================================================================================
+say '=' x 100;
 say 'Frames';
-.&to-pretty-table.say for $h2o.frames;
+
+for $h2o.frames -> $f {
+    say '÷' x 80;
+    say $f.gist;
+    $f.preview.&to-pretty-table.say
+}

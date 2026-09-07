@@ -7,61 +7,17 @@ platform [H2O-3](https://h2o.ai/).
 
 ## Installation
 
----
+From Zef ecosystem:
 
-## Usage examples
-
-```raku
-use H2O::Client;
-
-my $h2o = H2O::Client.new('http://127.0.0.1:54321');
-
-my $frame = $h2o.upload(
-    [%(x => 1, group => 'a'), %(x => 2, group => 'b')],
-    destination-frame => 'example.hex'
-).wait.result;
-
-say $frame.shape;       # (2 2)
-say $frame.names;
-say $frame<group>.type; # column proxy
-say $frame.head(2);     # explicitly download a small preview
+```
+zef install H20::Client
 ```
 
-`H2O::Client::Frame` is a lightweight handle to a server-side frame. Its
-identity is the H2O frame key; metadata is fetched lazily and cached. Use
-`refresh` after external changes. `H2O::Client::Column` exposes column type,
-domain, and summary statistics. Long-running parse, model-build, and export
-operations return `H2O::Client::Job`; call `wait` before consuming `result`.
+From GitHub:
 
-To start a local cluster:
-
-```raku
-my $h2o = H2O::Client.new;
-$h2o.init(jar-path => '/path/to/h2o.jar', jvm-opts => <-Xmx4g>);
-LEAVE $h2o.shutdown;
 ```
-
-`shutdown` stops only a process started by this client. Shutting down a cluster
-connected to externally requires the explicit `:cluster` option.
-
-----
-
-## Tests
-
-Fast tests use mocked transport responses and do not require Java:
-
-```console
-prove6 -Ilib t
+zef install https://github.com/antononcube/Raku-H2O-Client.git
 ```
-
-Live integration tests are intentionally kept under `xt/`:
-
-```console
-H2O_JAR=/path/to/h2o.jar prove6 -Ilib xt
-```
-
-H2O 3.46 supports Java 8–17. If `java` on `PATH` is newer, set `H2O_JAVA`
-to the full path of a supported Java executable.
 
 ---
 
@@ -93,3 +49,74 @@ java -jar h2o.jar
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home 
 java -jar h2o.jar 
 ```
+
+## Usage examples
+
+```raku
+use H2O::Client;
+
+my $h2o = H2O::Client.new('http://127.0.0.1:54321');
+
+my $frame = $h2o.upload(
+    [%(x => 1, group => 'a'), %(x => 2, group => 'b')],
+    destination-frame => 'example.hex'
+).wait.result;
+
+say $frame.shape;       # (2 2)
+say $frame.names;
+say $frame<group>.type; # column proxy
+say $frame.head(2);     # explicitly download a small preview
+```
+
+`H2O::Client::Frame` is a lightweight handle to a server-side frame. Its
+identity is the H2O frame key; metadata is fetched lazily and cached. Use
+`refresh` after external changes. `H2O::Client::Column` exposes column type,
+domain, and summary statistics. Long-running parse, model-build, and export
+operations return `H2O::Client::Job`; call `wait` before consuming `result`.
+
+## Rapids transformations
+
+Frame transformations are explicit, composable Rapids expressions. They do not
+run until `materialize` is called with a destination key:
+
+```raku
+my $adults = $frame
+    .where($frame<age>.expression.greater-than(18))
+    .select(<age income>)
+    .materialize('adults.hex');
+```
+
+The initial layer supports column selection, row filtering, arithmetic,
+comparisons, boolean operations, `cbind`, `rbind`, `sum`, and `mean`. It opens
+an H2O Rapids session lazily; call `$h2o.close` when retaining a connection for
+a long-running process is no longer necessary.
+
+To start a local cluster:
+
+```raku
+my $h2o = H2O::Client.new;
+$h2o.init(jar-path => '/path/to/h2o.jar', jvm-opts => <-Xmx4g>);
+LEAVE $h2o.shutdown;
+```
+
+`shutdown` stops only a process started by this client. Shutting down a cluster
+connected to externally requires the explicit `:cluster` option.
+
+----
+
+## Tests
+
+Fast tests use mocked transport responses and do not require Java:
+
+```console
+prove6 -Ilib t
+```
+
+Live integration tests are intentionally kept under `xt/`:
+
+```console
+H2O_JAR=/path/to/h2o.jar prove6 -Ilib xt
+```
+
+H2O 3.46 supports Java 8–17. If `java` on `PATH` is newer, set `H2O_JAVA`
+to the full path of a supported Java executable.

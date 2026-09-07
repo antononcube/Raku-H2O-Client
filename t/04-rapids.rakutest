@@ -1,0 +1,38 @@
+use v6.d;
+use Test;
+use URI::Encode;
+use H2O::Client;
+
+class RapidsTransport {
+    has %.last-post is rw;
+    method encode($value) { uri_encode_component($value.Str) }
+    method get($path, *%options) { {} }
+    method post($path, :%content = %(), *%options) {
+        %!last-post = :$path, :%content;
+        return %(session_key => 'session-1') if $path eq '/4/sessions';
+        %(key => %(name => 'result.hex'), num_rows => 2, num_cols => 1)
+    }
+    method delete($path) { {} }
+}
+
+my $transport = RapidsTransport.new;
+my $client = H2O::Client.new(:$transport);
+my $frame = $client.frame('source.hex');
+
+is $frame.identity, 'http://127.0.0.1:54321#source.hex', 'frame identity includes cluster and key';
+is $frame.expression.col('age').greater-than(18).ast,
+    '(> (cols source.hex "age") 18)', 'column predicate has a safe Rapids AST';
+is $frame.select(<age income>).ast,
+    '(cols_py source.hex ["age" "income"])', 'selection is a lazy expression';
+
+my $result = $frame.expression.add(1).materialize('result.hex');
+isa-ok $result, H2O::Client::Frame, 'materializing expression returns a frame proxy';
+is $transport.last-post<path>, '/99/Rapids', 'Rapids endpoint is used';
+is $transport.last-post<content><ast>, '(tmp= result.hex (+ source.hex 1))',
+    'destination is explicitly materialized through tmp=';
+is $transport.last-post<content><session_id>, 'session-1',
+    'Rapids execution carries the client session key';
+throws-like { $client.frame('bad key').expression }, X::AdHoc,
+    'unsafe frame keys cannot become a Rapids expression';
+
+done-testing;

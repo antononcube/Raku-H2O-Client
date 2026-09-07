@@ -15,5 +15,6 @@ class H2O::Client::Column {
     method mean() { self!metadata<mean> }
     method sigma() { self!metadata<sigma> }
     method percentiles() { self!metadata<percentiles> }
+    method expression() { $!frame.expression.col($!name) }
     method gist() { "H2O::Column({$!frame.id}���{$!name})" }
 }

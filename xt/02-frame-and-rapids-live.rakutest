@@ -1,0 +1,60 @@
+use v6.d;
+use Test;
+use H2O::Client;
+
+my $url = %*ENV<H2O_URL> // '';
+unless $url.chars {
+    plan 1;
+    skip 'Set H2O_URL (for example http://localhost:54321) to run this attached-cluster test';
+    exit;
+}
+
+my $tag = "raku-frame-{$*PID}-{now.Int}-{1_000_000.rand.Int}";
+my $source-id = "{$tag}-source.hex";
+my $result-id = "{$tag}-filtered.hex";
+my $download = $*TMPDIR.IO.add("{$tag}.csv");
+my $export = $*TMPDIR.IO.add("{$tag}-export.csv");
+my $client = H2O::Client.new($url);
+my ($source, $result);
+LEAVE {
+    try $client.close;
+    try $result.delete if $result.defined;
+    try $source.delete if $source.defined;
+    try $download.unlink if $download.e;
+    try $export.unlink if $export.e;
+}
+
+my @records =
+    %(x => 1, group => 'a'),
+    %(x => 2, group => 'b'),
+    %(x => 3, group => 'a');
+$source = $client.upload(@records, destination-frame => $source-id).wait.result;
+
+is $source.id, $source-id, 'remote frame preserves its requested key';
+is-deeply $source.shape, (3, 2), 'frame metadata reports dimensions';
+is-deeply $source.names.sort, <group x>, 'frame metadata reports columns';
+is $source.head(2).elems, 2, 'preview materializes a bounded row set';
+ok $source.summary(column => 'x')<frames>[0]<columns>[0]<mean>.defined,
+    'column summary returns rollup statistics';
+
+$source.download($download);
+ok $download.f && $download.s > 0, 'frame download writes CSV locally';
+
+my $export-job = $source.export($export.Str, force => True);
+$export-job.wait(timeout => 90);
+ok $export.f && $export.s > 0, 'server-side export completes';
+
+my $predicate = $source<x>.expression.greater-than(1);
+$result = $source.where($predicate).select('x').materialize($result-id);
+is-deeply $result.shape, (2, 1), 'Rapids filter and selection materialize a new frame';
+is-deeply $result.head(2).map(*<x>).Array, [2.0, 3.0],
+    'Rapids result has expected values';
+
+ok $result.delete, 'derived frame can be deleted';
+ok !$result.exists, 'deleted derived frame is gone';
+$result = Nil;
+ok $source.delete, 'source frame can be deleted';
+ok !$source.exists, 'deleted source frame is gone';
+$source = Nil;
+
+done-testing;

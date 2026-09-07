@@ -150,9 +150,53 @@ I did not need additional documentation for this design: the upstream `FrameV3`,
 
 ---
 
-## Implementation
+## Implementation (core)
 
 ```text
 Ok. Do the suggested implementation steps. Add corresponding tests in the directories "./t" and "./xt". 
 In "./t" put "easy" or sanity tests; in "./xt" tests that involve actual Java H2O execution.
 ```
+
+----
+
+## Implementation extension (data frames transformations, Rapids)
+
+```text
+I started the H2O cluster -- can be found at: http://localhost:54321 .
+Proceed with implementing data frame(s)  identity, metadata, preview, summary, download/export, and deletion. 
+For transformations, build a smaller explicit Rapids expression layer once the basic resource model is stable.
+```
+
+### Answer
+
+I have the Rapids layer scaffolded and am resolving its Raku type signature before live execution. I’ll preserve your newly added credits while completing the proxy and integration coverage.
+
+The Rapids API now compiles and its fast tests confirm AST construction, safe identifiers, expression-client ownership, and explicit `tmp=` materialization. I’m running the attached integration suite next; it creates only uniquely prefixed frames and temporary CSVs, then deletes them in cleanup.
+
+Guardian Review
+
+Guardian Review
+
+The first attached run validated all basic frame endpoints and even completed one Rapids transformation. A second run exposed H2O’s Rapids session requirement: submitting without a `/4/sessions` key can leave server-side vector references behind. I’m adding lazy session creation and explicit client closure, matching H2O’s own Python client protocol.
+
+Guardian Review
+
+Implemented and live-validated the frame resource API against your running H2O cluster.
+
+- `Frame` now has stable cluster/key identity, lazy metadata, preview/head/tail, summaries, download, export jobs, deletion, and explicit Rapids entry points: [Frame.rakumod](/Volumes/Macintosh%20HD/Users/antonov/Raku-H2O-Client/lib/H2O/Client/Frame.rakumod)
+- Added a small, safe, lazy Rapids expression layer: [Expr.rakumod](/Volumes/Macintosh%20HD/Users/antonov/Raku-H2O-Client/lib/H2O/Client/Rapids/Expr.rakumod)
+- Rapids now creates and uses an H2O session lazily, preventing server-side reference leaks: [Client.rakumod](/Volumes/Macintosh%20HD/Users/antonov/Raku-H2O-Client/lib/H2O/Client.rakumod)
+- Documented the transformation API in [README.md](/Volumes/Macintosh%20HD/Users/antonov/Raku-H2O-Client/README.md).
+
+Example:
+
+```raku
+my $adults = $frame
+    .where($frame<age>.expression.greater-than(18))
+    .select(<age income>)
+    .materialize('adults.hex');
+```
+
+All fast tests pass. The attached-cluster integration test also passed against `http://localhost:54321`, covering metadata, preview, summary, download, export, Rapids filtering/selection, and cleanup: [xt/02-frame-and-rapids-live.rakutest](/Volumes/Macintosh%20HD/Users/antonov/Raku-H2O-Client/xt/02-frame-and-rapids-live.rakutest).
+
+Your `resources/` directory was left untouched.

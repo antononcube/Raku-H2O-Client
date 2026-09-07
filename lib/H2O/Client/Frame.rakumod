@@ -1,6 +1,7 @@
 use v6.d;
 
 use H2O::Client::Column;
+use H2O::Client::Rapids::Expr;
 
 class H2O::Client::Frame does Associative {
     has $.client is required;
@@ -8,6 +9,11 @@ class H2O::Client::Frame does Associative {
     has %!metadata;
     has Bool $!loaded = False;
     has Bool $!deleted = False;
+
+    method identity(--> Str:D) { "{$!client.base-url}#{$!id}" }
+    method WHICH() { ValueObjAt.new(self.^name ~ '|' ~ self.identity) }
+    method Str() { $!id }
+    method deleted(--> Bool:D) { $!deleted }
 
     method refresh(Bool:D :$light = True --> H2O::Client::Frame) {
         my %query = row_count => 10, column_count => -1, full_column_count => 0;
@@ -29,6 +35,7 @@ class H2O::Client::Frame does Associative {
     method nrows() { self!ensure<rows>.Int }
     method ncols() { (self!ensure<num_columns> // self!ensure<total_column_count>).Int }
     method shape() { (self.nrows, self.ncols) }
+    method dimensions(Bool:D :p(:$pairs)=False) { $pairs ?? %(rows => self.nrows, columns => self.nocls) !! (self.nrows, self.ncols) }
     method names() { (self!ensure<columns> // []).grep(*.defined).map(*<label>).Array }
     method types() {
         Map.new((self!ensure<columns> // []).grep(*.defined).map({ .<label> => .<type> }))
@@ -39,7 +46,7 @@ class H2O::Client::Frame does Associative {
 
     method column-metadata(Str:D $name) {
         my $column = (self!ensure<columns> // []).grep(*.defined).first(*<label> eq $name);
-        die "Column '$name' does not exist in frame '$!id'" unless $column.defined;
+        die "Column '$name' does not exist in frame '$!id'." unless $column.defined;
         $column
     }
 
@@ -56,7 +63,7 @@ class H2O::Client::Frame does Associative {
         my @wanted = @columns.elems ?? @columns !! @all;
         my @indices = @wanted.map({
             my $index = @all.first($_, :k);
-            die "Column '$_' does not exist in frame '$!id'" unless $index.defined;
+            die "Column '$_' does not exist in frame '$!id'." unless $index.defined;
             $index
         });
         # H2O's endpoint pages contiguous columns; request the span and filter locally.
@@ -94,6 +101,14 @@ class H2O::Client::Frame does Associative {
         self.preview(:$rows, offset => (self.nrows - $rows max 0).UInt)
     }
 
+    method expression(--> H2O::Client::Rapids::Expr) {
+        H2O::Client::Rapids::Expr.frame($!client, $!id)
+    }
+    method select(*@columns) { self.expression.select(|@columns) }
+    method where(H2O::Client::Rapids::Expr:D $predicate) {
+        self.expression.where($predicate)
+    }
+
     method summary(Str :$column) {
         my $base = "/3/Frames/{ $!client.encode($!id) }";
         $column.defined
@@ -102,8 +117,7 @@ class H2O::Client::Frame does Associative {
     }
 
     method download(IO::Path:D $path, *%query --> IO::Path:D) {
-        my $bytes = $!client.get('/3/DownloadDataset',
-            query => %(frame_id => $!id, |%query), :raw);
+        my $bytes = $!client.get('/3/DownloadDataset', query => %(frame_id => $!id, |%query), :raw);
         $path.spurt($bytes, :bin);
         $path
     }

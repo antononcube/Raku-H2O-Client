@@ -7,12 +7,14 @@ use H2O::Client::Connector;
 use H2O::Client::Transport;
 use H2O::Client::Frame;
 use H2O::Client::Job;
+use H2O::Client::Rapids::Expr;
 
 class H2O::Client {
     has Str:D $.base-url is rw = 'http://127.0.0.1:54321';
     has Int:D $.timezone is rw = $*TZ;
     has $.transport;
     has H2O::Client::Connector $!connector;
+    has Str $!rapids-session-id;
 
     submethod BUILD(:$!base-url = 'http://127.0.0.1:54321',
                     :tz(:$!timezone) = $*TZ, :$transport, :$connector) {
@@ -85,6 +87,36 @@ class H2O::Client {
         my $frame = H2O::Client::Frame.new(:client(self), :$id);
         $frame.refresh if $refresh;
         $frame
+    }
+
+    method rapids(H2O::Client::Rapids::Expr:D $expression, Str :$destination) {
+        die 'Rapids expression belongs to a different H2O client'
+            unless $expression.client === self;
+        my $ast = $expression.ast;
+        if $destination.defined {
+            my $id = H2O::Client::Rapids::Expr.identifier($destination);
+            $ast = "(tmp= $id $ast)";
+        }
+        my $response = self.post('/99/Rapids', content => %(
+            ast => $ast, session_id => self!rapids-session-id
+        ));
+        return self.frame($destination) if $destination.defined;
+        $response
+    }
+
+    method !rapids-session-id(--> Str:D) {
+        return $!rapids-session-id if $!rapids-session-id.defined;
+        my $response = self.post('/4/sessions');
+        my $id = $response<session_key> // $response<session_id>;
+        die 'H2O did not return a Rapids session key' unless $id.defined;
+        $!rapids-session-id = $id.Str
+    }
+
+    method close() {
+        return True unless $!rapids-session-id.defined;
+        try self.delete("/4/sessions/{self.encode($!rapids-session-id)}");
+        $!rapids-session-id = Nil;
+        True
     }
 
     multi method frames(Str:D $format) {

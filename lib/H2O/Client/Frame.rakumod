@@ -12,6 +12,7 @@ class H2O::Client::Frame does Associative {
 
     method identity(--> Str:D) { "{$!client.base-url}#{$!id}" }
     method WHICH() { ValueObjAt.new(self.^name ~ '|' ~ self.identity) }
+    method WHAT() { ValueObjAt.new(self.^name) }
     method Str() { $!id }
     method deleted(--> Bool:D) { $!deleted }
 
@@ -39,8 +40,9 @@ class H2O::Client::Frame does Associative {
     method shape(Bool:D :p(:$pairs)=False) { $pairs ?? %(nrow => self.nrow, ncol => self.ncol) !! (self.nrow, self.ncol) }
     method dimensions(Bool:D :p(:$pairs)=False) { $pairs ?? %(rows => self.nrow, columns => self.ncol) !! (self.nrow, self.ncol) }
     method names() { (self!ensure<columns> // []).grep(*.defined).map(*<label>).Array }
+    method columns() { self.names }
     method types() {
-        Map.new((self!ensure<columns> // []).grep(*.defined).map({ .<label> => .<type> }))
+       (self!ensure<columns> // []).grep(*.defined).map({ .<label> => .<type> }).Hash
     }
     method checksum() { self!ensure<checksum> }
     method byte-size() { self!ensure<byte_size> }
@@ -60,9 +62,9 @@ class H2O::Client::Frame does Associative {
     method AT-KEY($name) { self.column($name.Str) }
     method EXISTS-KEY($name) { so self.names.first(* eq $name.Str) }
 
-    method preview(UInt:D :$rows = 10, UInt:D :$offset = 0, :@columns --> Array) {
+    method preview(UInt:D :$rows = 10, UInt:D :$offset = 0, :$columns = Whatever --> Array) {
         my @all = self.names;
-        my @wanted = @columns.elems ?? @columns !! @all;
+        my @wanted = $columns ~~ (Array:D | List:D | Seq:D) && $columns.elems ?? |$columns !! @all;
         my @indices = @wanted.map({
             my $index = @all.first($_, :k);
             die "Column '$_' does not exist in frame '$!id'." unless $index.defined;
@@ -86,8 +88,10 @@ class H2O::Client::Frame does Associative {
                 if $row < $values.elems {
                     my $value = $values[$row];
                     my $domain = %column<domain>;
-                    if $domain ~~ Positional && $value ~~ Numeric && $value == $value &&
-                       0 <= $value.Int < $domain.elems {
+                    if $domain ~~ Positional &&
+                            $value ~~ Numeric &&
+                            $value == $value &&
+                            0 <= $value.Int < $domain.elems {
                         $value = $domain[$value.Int];
                     }
                     %record{$name} = $value;

@@ -90,10 +90,10 @@ class H2O::Client {
     }
 
     method rapids(H2O::Client::Rapids::Expr:D $expression, Str :$destination) {
-        die 'Rapids expression belongs to a different H2O client'
-            unless $expression.client === self;
+        die 'Rapids expression belongs to a different H2O client.' unless $expression.client === self;
+
         my $ast = $expression.ast;
-        if $destination.defined {
+        with $destination {
             my $id = H2O::Client::Rapids::Expr.identifier($destination);
             $ast = "(tmp= $id $ast)";
         }
@@ -108,7 +108,7 @@ class H2O::Client {
         return $!rapids-session-id if $!rapids-session-id.defined;
         my $response = self.post('/4/sessions');
         my $id = $response<session_key> // $response<session_id>;
-        die 'H2O did not return a Rapids session key' unless $id.defined;
+        die 'H2O did not return a Rapids session key.' unless $id.defined;
         $!rapids-session-id = $id.Str
     }
 
@@ -161,7 +161,7 @@ class H2O::Client {
         my $uploaded = self.post('/3/PostFile', :file($path));
         my $source = $uploaded<destination_frame><name> //
                      $uploaded<destination_frame> // $uploaded<key><name>;
-        die 'H2O upload response did not contain a destination frame' unless $source.defined;
+        die 'H2O upload response did not contain a destination frame.' unless $source.defined;
         my $setup = self.data-parse-setup([$source]);
         my %props =
             destination_frame => ($destination-frame // "raku-{$*PID}-{now.Int}.hex"),
@@ -177,14 +177,16 @@ class H2O::Client {
         self.data-parse(%props)
     }
 
-    method upload(@records, Str :$destination-frame, :@column-names, :@column-types,
+    method upload(@records,
+                  Str :$destination-frame,
+                  :@column-names,
+                  :@column-types,
                   *%parse-options --> H2O::Client::Job) {
         my $path = $*TMPDIR.IO.add("h2o-upload-{$*PID}-{now.Int}-{1_000_000.rand.Int}.csv");
         LEAVE try $path.unlink;
-        die 'Cannot serialize records as CSV' unless data-export($path.Str, @records, 'csv');
+        die 'Cannot serialize records as CSV.' unless data-export($path.Str, @records, 'csv');
         %parse-options<check_header> //= 1;
-        self.upload-file($path, :$destination-frame, :@column-names, :@column-types,
-                         |%parse-options)
+        self.upload-file($path, :$destination-frame, :@column-names, :@column-types, |%parse-options)
     }
 
     multi method data-import(@records, *%options) { self.upload(@records, |%options) }

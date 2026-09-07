@@ -2,7 +2,7 @@ use v6.d;
 use Test;
 use H2O::Client;
 
-my $url = %*ENV<H2O_URL> // '';
+my $url = %*ENV<H2O_URL> // 'http://localhost:54321';
 unless $url.chars {
     plan 1;
     skip 'Set H2O_URL (for example http://localhost:54321) to run this attached-cluster test';
@@ -47,6 +47,7 @@ ok $export.f && $export.s > 0, 'server-side export completes';
 my $predicate = $source<x>.expression.greater-than(1);
 $result = $source.where($predicate).select('x').materialize($result-id);
 is-deeply $result.shape, (2, 1), 'Rapids filter and selection materialize a new frame';
+is-deeply $result.dimensions(:pairs), %(:2rows, :1columns), 'Rapids filter and selection materialize a new frame';
 is-deeply $result.head(2).map(*<x>).Array, [2.0, 3.0],
     'Rapids result has expected values';
 

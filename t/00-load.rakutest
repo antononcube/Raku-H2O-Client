@@ -1,0 +1,11 @@
+use v6.d;
+use Test;
+
+use-ok 'H2O::Client';
+use-ok 'H2O::Client::Connector';
+use-ok 'H2O::Client::Transport';
+use-ok 'H2O::Client::Frame';
+use-ok 'H2O::Client::Column';
+use-ok 'H2O::Client::Job';
+
+done-testing;

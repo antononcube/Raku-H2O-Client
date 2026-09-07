@@ -8,19 +8,22 @@
   ],
   "auth": "zef:antononcube",
   "depends": [
+    "HTTP::Tiny:ver<0.2.5+>",
     "JSON::Fast:ver<0.17+>",
-    "LLM::Functions:ver<0.4.1+>",
-    "LLM::Prompts:ver<0.2.5+>",
-    "Text::SubParsers:ver<0.1.2+>",
+    "URI::Encode",
     "Data::Importers:ver<0.1.7+>",
-    "Data::Translators:ver<0.1.13+>",
-    "Hash::Merge:ver<2.0.0>:api<2>"
+    "Data::Translators:ver<0.1.13+>"
   ],
   "build-depends": [],
-  "test-depends": [],
+  "test-depends": ["Test"],
   "provides": {
     "H2O::Client": "lib/H2O/Client.rakumod",
-    "H2O::Client::Connector": "lib/H2O/Client/Connector.rakumod"
+    "H2O::Client::Column": "lib/H2O/Client/Column.rakumod",
+    "H2O::Client::Connector": "lib/H2O/Client/Connector.rakumod",
+    "H2O::Client::Exception": "lib/H2O/Client/Exception.rakumod",
+    "H2O::Client::Frame": "lib/H2O/Client/Frame.rakumod",
+    "H2O::Client::Job": "lib/H2O/Client/Job.rakumod",
+    "H2O::Client::Transport": "lib/H2O/Client/Transport.rakumod"
   },
   "resources": [],
   "license": "Apache-License-2.0",

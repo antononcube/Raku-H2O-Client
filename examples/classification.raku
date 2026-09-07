@@ -1,17 +1,11 @@
 #!/usr/bin/env raku
 use v6.d;
 
-use lib <. lib>;
-
-use JSON::Fast;
-use HTTP::Tiny;
-use URI::Encode;
 use H2O::Client;
 
 use Data::Reshapers;
 use Data::Summarizers;
 use Data::ExampleDatasets;
-use Text::CSV;
 
 #==========================================================
 # H2O cluster access
@@ -25,41 +19,70 @@ my $h2o = H2O::Client.new($base-url, tz => $*TZ);
 #==========================================================
 my @dsExample = example-dataset('Stat2Data::Titanic');
 #@dsExample .= map({ $_<Survived> = $_<Survived> ?? 'yes' !! 'no'; $_ });
+#@dsExample .= map({ $_<Age> = (10 * round($_<Age> / 10)).Str; $_ });
 
 records-summary(@dsExample);
 
+#`[
 # Export example dataset as a CSV file
 my $filePath = $*TMPDIR ~ '/titanic.csv';
 csv( in => @dsExample, out => $filePath, sep => ',');
 
 # Import dataset in H2O
 my %importRes = $h2o.data-import($filePath);
+]
 
-# Get parsing analysis/setup
-my %parseSetupRes = $h2o.data-parse-setup([%importRes<destination_frames>]);
+#----------------------------------------------------------
+# Make training and testing datasets
+#----------------------------------------------------------
 
-my %content =
-        destination_frame => 'titanic.hex',
-        source_frames => [%parseSetupRes<source_frames>.head<name>],
-        parse_type => %parseSetupRes<parse_type>,
-        separator => %parseSetupRes<separator>,
-        number_columns => %parseSetupRes<number_columns>,
-        single_quotes => False,
-        column_names => @dsExample.head.keys,
-        column_types => %parseSetupRes<column_types>,
-        check_header => -1,
-        delete_on_done => True,
-        chunk_size => 4194304
-        ;
+my (@training-indexes, @testing-indexes);
+with take-drop((^@dsExample.elems).pick(*), floor(@dsExample.elems * 0.75) ) {
+        @training-indexes = $_.head;
+        @testing-indexes = $_.tail;
+}
 
-my %parseRes = $h2o.data-parse(%content);
+my @field-names = <Age Sex PClass Survived>;
+
+my @dsTraining = select-columns(@dsExample[@training-indexes], @field-names);
+my @dsTesting = select-columns(@dsExample[@testing-indexes], @field-names);
+
+say dimensions(@dsTraining);
+say dimensions(@dsTesting);
+
+say "Training:";
+records-summary(@dsTraining, :@field-names);
+
+say "Testing:";
+records-summary(@dsTesting, :@field-names);
+
+# Upload, parse, and wait for both remote frames.
+my $training-frame = $h2o.upload(
+    @dsTraining,
+    destination-frame => 'titanic-training.hex',
+    column-names => @field-names,
+    column-types => <Enum Enum Enum Enum>
+).wait.result;
+
+my $testing-frame = $h2o.upload(
+    @dsTesting,
+    destination-frame => 'titanic-testing.hex',
+    column-names => @field-names,
+    column-types => <Enum Enum Enum Enum>
+).wait.result;
+
+say "Training frame: {$training-frame.gist}";
+say "Testing frame: {$testing-frame.gist}";
+
+say "Frames : ";
+my @dsFrames = $h2o.frames('summary');
+say to-pretty-table(@dsFrames);
 
 #==========================================================
 # Poll jobs
 #==========================================================
 
 my @dsJobs = $h2o.jobs('summary');
-
 say to-pretty-table(@dsJobs);
 
 
@@ -68,22 +91,25 @@ say to-pretty-table(@dsJobs);
 #==========================================================
 
 my %model-props =
-        "training_frame" => "titanic.hex",
-        "response_column" => "Survived";
+        response_column => @field-names.tail,
+        training_frame => "titanic-training.hex"
+        ;
 
-my %modelRes = $h2o.model-build('drf', %model-props);
+my $model-job = $h2o.model-build('drf', %model-props).wait;
 
-say (:%modelRes);
-
+say "Models :";
 my @dsModels = $h2o.models('summary');
 
 say to-pretty-table(@dsModels);
 
-my $model-id = @dsModels.tail<name>;
-my %predRes = $h2o.model-predict($model-id, 'titanic.hex', 'titanic-predictions.hex');
+my $model-id = $model-job.destination-id // @dsModels.tail<id>;
+say "Using : {(:$model-id)}";
 
-say 'Prediction reuslt';
-say to-json(%predRes);
+my $predictions = $h2o.model-predict(
+    $model-id, $testing-frame.id, 'titanic-predictions.hex');
+
+say 'Prediction result';
+say $predictions.gist;
 
 say 'Frames';
-say to-pretty-table($h2o.frames);
+.&to-pretty-table.say for $h2o.frames;

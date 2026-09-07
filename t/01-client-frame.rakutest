@@ -1,0 +1,54 @@
+use v6.d;
+use Test;
+use URI::Encode;
+use H2O::Client;
+
+class FakeTransport {
+    has @.calls;
+    method encode($value) { uri_encode_component($value.Str) }
+    method get($path, :%query = %(), :$raw = False) {
+        @!calls.push: %(method => 'GET', :$path, :%query, :$raw);
+        return 'a,b\n1,2\n'.encode if $raw;
+        return %(frames => [%(frame_id => %(name => 'iris hex'))]) if $path eq '/3/Frames';
+        return %(frames => [self.metadata.item]) if $path.starts-with('/3/Frames/iris%20hex');
+        die "Unexpected GET $path";
+    }
+    method post($path, *%args) { @!calls.push: %(method => 'POST', :$path, |%args); {} }
+    method delete($path) { @!calls.push: %(method => 'DELETE', :$path); {} }
+    method metadata() {
+        %(frame_id => %(name => 'iris hex'), rows => 3, num_columns => 2,
+          checksum => 42, byte_size => 64, is_text => False,
+          columns => [
+              %(label => 'x', type => 'real', data => [1e0, 2e0, 3e0],
+                missing_count => 0, mean => 2e0),
+              %(label => 'species', type => 'enum', string_data => <setosa versicolor virginica>,
+                domain => <setosa versicolor virginica>, missing_count => 0)
+          ])
+    }
+}
+
+my $transport = FakeTransport.new;
+my $client = H2O::Client.new('http://example.test:1234', :$transport);
+is $client.base-url, 'http://example.test:1234', 'positional base URL is retained';
+
+my @frames = $client.frames;
+is @frames.elems, 1, 'frame list becomes proxy objects';
+isa-ok @frames.head, H2O::Client::Frame;
+is @frames.head.id, 'iris hex', 'frame key is retained';
+is-deeply @frames.head.shape, (3, 2), 'metadata is loaded lazily';
+is-deeply @frames.head.names, <x species>.Array, 'column names are exposed';
+is @frames.head.types<x>, 'real', 'column types are exposed';
+
+my $column = @frames.head<species>;
+isa-ok $column, H2O::Client::Column;
+is-deeply $column.domain, <setosa versicolor virginica>.Array, 'column domain is available';
+
+my @preview = @frames.head.preview(rows => 2, columns => <species x>);
+is @preview.elems, 2, 'preview materializes the requested row count';
+is @preview[0]<species>, 'setosa', 'preview selects named columns';
+is @preview[1]<x>, 2e0, 'preview returns numeric values';
+
+ok @frames.head.delete, 'frame can be deleted';
+ok $transport.calls.tail<path>.contains('iris%20hex'), 'frame IDs are URL encoded';
+
+done-testing;

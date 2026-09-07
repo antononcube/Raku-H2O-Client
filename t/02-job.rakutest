@@ -1,0 +1,30 @@
+use v6.d;
+use Test;
+use URI::Encode;
+use H2O::Client;
+
+class JobTransport {
+    has Int $!polls = 0;
+    method encode($value) { uri_encode_component($value.Str) }
+    method get($path, *%options) {
+        $!polls++;
+        my %job = %(key => %(name => 'job 1'),
+            dest => %(name => 'result.hex', type => 'Frame'),
+            status => ($!polls > 1 ?? 'DONE' !! 'RUNNING'),
+            progress => ($!polls > 1 ?? 1e0 !! 0.5e0));
+        %(jobs => [%job.item])
+    }
+    method post($path, *%options) { {} }
+    method delete($path) { {} }
+}
+
+my $client = H2O::Client.new(:transport(JobTransport.new));
+my $job = H2O::Client::Job.from-response($client,
+    %(job => %(key => %(name => 'job 1'), dest => %(name => 'result.hex', type => 'Frame'))));
+$job.wait(timeout => 2, interval => 0.01);
+ok $job.done, 'wait polls until DONE';
+is $job.progress, 1e0, 'job progress is refreshed';
+isa-ok $job.result, H2O::Client::Frame, 'frame destinations become proxies';
+is $job.result.id, 'result.hex', 'result proxy uses destination key';
+
+done-testing;

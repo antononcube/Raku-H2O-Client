@@ -1,0 +1,31 @@
+use v6.d;
+use Test;
+use H2O::Client;
+
+my $jar = %*ENV<H2O_JAR> // '';
+unless $jar.chars && $jar.IO.f {
+    plan 1;
+    skip 'Set H2O_JAR to run the live H2O integration test';
+    exit;
+}
+
+my $port = (%*ENV<H2O_PORT> // (55_000 + 1_000.rand.Int)).Int;
+my $client = H2O::Client.new;
+LEAVE try $client.shutdown(wait-seconds => 10);
+
+my $cloud = $client.init(jar-path => $jar, :$port, jvm-opts => <-Xmx1g>,
+                          wait-seconds => 90);
+ok $cloud<cloud_healthy> // $cloud<cloud_size>, 'started a live H2O cluster';
+
+my @records = %(x => 1, group => 'a'), %(x => 2, group => 'b'), %(x => 3, group => 'a');
+my $job = $client.upload(@records, destination-frame => 'raku-live-test.hex');
+$job.wait(timeout => 90);
+my $frame = $job.result;
+isa-ok $frame, H2O::Client::Frame;
+is-deeply $frame.shape, (3, 2), 'parsed frame has expected dimensions';
+is $frame.head(2).elems, 2, 'live preview downloads rows';
+ok $frame.delete, 'live frame deletion succeeds';
+ok !$frame.exists, 'deleted live frame no longer exists';
+ok $client.shutdown(wait-seconds => 10), 'owned H2O cluster shuts down cleanly';
+
+done-testing;

@@ -1,0 +1,24 @@
+use v6.d;
+use Test;
+use HTTP::Tiny;
+use H2O::Client::Transport;
+use H2O::Client::Exception;
+
+class FakeHTTP is HTTP::Tiny {
+    has %.response is rw;
+    has $.seen is rw;
+    method request(|capture) { $!seen = capture; %!response }
+}
+
+my $http = FakeHTTP.new(response => %(success => True, status => 200,
+                                      content => '{"cloud_name":"test"}'.encode));
+my $transport = H2O::Client::Transport.new(base-url => 'http://example.test/', :$http);
+is $transport.get('/3/Cloud')<cloud_name>, 'test', 'JSON is read from content';
+$transport.get('/3/Frames', query => %(frame_id => 'a b/x'));
+ok $http.seen.Str.contains('a%20b%2Fx'), 'query parameters are URL encoded';
+
+$http.response = %(success => False, status => 404, content => 'missing'.encode);
+throws-like { $transport.get('/3/Frames/nope') }, X::H2O::HTTP,
+    status => 404, body => 'missing', 'HTTP failures are typed exceptions';
+
+done-testing;

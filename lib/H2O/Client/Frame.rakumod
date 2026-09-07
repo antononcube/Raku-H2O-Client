@@ -140,5 +140,5 @@ class H2O::Client::Frame does Associative {
     }
 
     method raw() { self.metadata }
-    method gist() { "H2O::Frame<$!id>[{self.nrow} × {self.nrow}]" }
+    method gist() { "H2O::Frame<$!id>[{self.nrow} × {self.ncol}]" }
 }

@@ -134,7 +134,7 @@ class H2O::Client {
             self.frame($id.Str)
         }).Array;
         return @frames unless $summary;
-        @frames.map({ %(id => .id, rows => .nrows, columns => .ncols,
+        @frames.map({ %(id => .id, rows => .nrow, columns => .ncol,
                         names => .names, types => .types) }).Array
     }
 

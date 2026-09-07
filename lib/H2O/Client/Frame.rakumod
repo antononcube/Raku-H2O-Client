@@ -32,10 +32,12 @@ class H2O::Client::Frame does Associative {
 
     method !ensure() { self.refresh unless $!loaded; %!metadata }
     method metadata() { self!ensure.Hash }
-    method nrows() { self!ensure<rows>.Int }
-    method ncols() { (self!ensure<num_columns> // self!ensure<total_column_count>).Int }
-    method shape() { (self.nrows, self.ncols) }
-    method dimensions(Bool:D :p(:$pairs)=False) { $pairs ?? %(rows => self.nrows, columns => self.ncols) !! (self.nrows, self.ncols) }
+    method nrow() { self!ensure<rows>.Int }
+    method rows-count() { self.nrow }
+    method ncol() { (self!ensure<num_columns> // self!ensure<total_column_count>).Int }
+    method columns-count() { self.ncol }
+    method shape(Bool:D :p(:$pairs)=False) { $pairs ?? %(nrow => self.nrow, ncol => self.ncol) !! (self.nrow, self.ncol) }
+    method dimensions(Bool:D :p(:$pairs)=False) { $pairs ?? %(rows => self.nrow, columns => self.ncol) !! (self.nrow, self.ncol) }
     method names() { (self!ensure<columns> // []).grep(*.defined).map(*<label>).Array }
     method types() {
         Map.new((self!ensure<columns> // []).grep(*.defined).map({ .<label> => .<type> }))
@@ -98,7 +100,7 @@ class H2O::Client::Frame does Associative {
 
     method head(UInt:D $rows = 10 --> Array) { self.preview(:$rows) }
     method tail(UInt:D $rows = 10 --> Array) {
-        self.preview(:$rows, offset => (self.nrows - $rows max 0).UInt)
+        self.preview(:$rows, offset => (self.nrow - $rows max 0).UInt)
     }
 
     method expression(--> H2O::Client::Rapids::Expr) {
@@ -138,5 +140,5 @@ class H2O::Client::Frame does Associative {
     }
 
     method raw() { self.metadata }
-    method gist() { "H2O::Frame<$!id>[{self.nrows} × {self.ncols}]" }
+    method gist() { "H2O::Frame<$!id>[{self.nrow} × {self.nrow}]" }
 }

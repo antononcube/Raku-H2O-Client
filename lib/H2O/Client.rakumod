@@ -134,8 +134,7 @@ class H2O::Client {
             self.frame($id.Str)
         }).Array;
         return @frames unless $summary;
-        @frames.map({ %(id => .id, rows => .nrow, columns => .ncol,
-                        names => .names, types => .types) }).Array
+        @frames.map({ %(id => .id, rows => .nrow, columns => .ncol, names => .names, types => .types) }).Array
     }
 
     multi method models(Str:D $format) { self.models(:$format) }

@@ -35,7 +35,7 @@ class H2O::Client::Frame does Associative {
     method nrows() { self!ensure<rows>.Int }
     method ncols() { (self!ensure<num_columns> // self!ensure<total_column_count>).Int }
     method shape() { (self.nrows, self.ncols) }
-    method dimensions(Bool:D :p(:$pairs)=False) { $pairs ?? %(rows => self.nrows, columns => self.nocls) !! (self.nrows, self.ncols) }
+    method dimensions(Bool:D :p(:$pairs)=False) { $pairs ?? %(rows => self.nrows, columns => self.ncols) !! (self.nrows, self.ncols) }
     method names() { (self!ensure<columns> // []).grep(*.defined).map(*<label>).Array }
     method types() {
         Map.new((self!ensure<columns> // []).grep(*.defined).map({ .<label> => .<type> }))

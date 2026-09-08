@@ -34,6 +34,7 @@ class H2O::Client::Frame does Associative {
     method !ensure() { self.refresh unless $!loaded; %!metadata }
     method metadata() { self!ensure.Hash }
     method nrow() { self!ensure<rows>.Int }
+    method elems() { self.nrow }
     method rows-count() { self.nrow }
     method ncol() { (self!ensure<num_columns> // self!ensure<total_column_count>).Int }
     method columns-count() { self.ncol }
@@ -79,6 +80,10 @@ class H2O::Client::Frame does Associative {
     }
 
     multi method AT-POS(Whatever --> Array) {
+        self.preview(rows => self.nrow)
+    }
+
+    multi method AT-POS(WhateverCode --> Array) {
         self.preview(rows => self.nrow)
     }
 

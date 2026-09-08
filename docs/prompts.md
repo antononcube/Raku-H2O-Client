@@ -328,3 +328,36 @@ Is there a better, more direct way using H2O.ai's REST API ?
 H2O-3 has no one-call REST endpoint that both imports server-visible files and creates a parsed frame. 
 The standard REST flow is exactly `GET /3/ImportFiles` → `POST /3/ParseSetup` → `POST /3/Parse`; 
 skipping setup is only practical when every parse setting is already known.
+
+----
+
+## Fixing extra row addition when uploading data with specified column names
+
+```text
+When I use `H20::Client::upload` with column names I get data frames that have one additional row. 
+See my change on row 31 of "./xt/02-frame-and-rapids-live.rakutest'. 
+With that change 6 of the tests below it fail.
+```
+
+### Answer
+
+[...] I reproduced the six failures against the live cluster. The generated CSV is headed group,x, while the explicit names are x,group; that explains the downstream predicate failure, but I’m checking the exact H2O parse request semantics to address the extra header row too.
+
+The cause is confirmed: H2O treats supplied `column_names` as an instruction to parse the first CSV line as data, regardless of `check_header`. 
+I’ll make `upload` serialize records in the requested column order with those names as the CSV’s actual header, 
+then let `ParseSetup` provide the matching parsed names instead of sending `column_names` again to `Parse`.
+
+Fixed the extra-row issue in "Client.rakumod".
+
+When explicit `column-names` are supplied, `upload` now:
+
+- Writes those names as the actual CSV header, in the requested order.
+- Orders associative record values to match those names.
+- Does not resend `column_names` to H2O’s `Parse` endpoint, since H2O otherwise treats the header as a data row.
+
+This also fixes the mismatched `x`/`group` types that caused the Rapids filter failures.
+
+Verified with:
+
+- `prove6 -Ilib xt/02-frame-and-rapids-live.rakutest` — pass, 16 tests
+- `prove6 -Ilib t` — pass, 57 tests

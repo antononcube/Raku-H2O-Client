@@ -205,8 +205,16 @@ class H2O::Client {
                   *%parse-options --> H2O::Client::Job) {
         my $path = $*TMPDIR.IO.add("h2o-upload-{$*PID}-{now.Int}-{1_000_000.rand.Int}.csv");
         LEAVE try $path.unlink;
-        die 'Cannot serialize records as CSV.' unless data-export($path.Str, @records, 'csv');
+        my $records-to-export = @column-names.elems
+            ?? [@column-names.Array, |@records.map(-> $record {
+                $record ~~ Associative
+                    ?? @column-names.map(-> $name { $record{$name} }).Array
+                    !! $record.Array
+            })]
+            !! @records;
+        die 'Cannot serialize records as CSV.' unless data-export($path.Str, $records-to-export, 'csv');
         %parse-options<check_header> //= 1;
+        return self.upload-file($path, :$destination-frame, :@column-types, |%parse-options) if @column-names.elems;
         self.upload-file($path, :$destination-frame, :@column-names, :@column-types, |%parse-options)
     }
 

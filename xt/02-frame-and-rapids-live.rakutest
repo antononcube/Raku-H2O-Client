@@ -28,7 +28,8 @@ my @records =
     %(x => 1, group => 'a'),
     %(x => 2, group => 'b'),
     %(x => 3, group => 'a');
-$source = $client.upload(@records, destination-frame => $source-id).wait.result;
+$source = $client.upload(@records, column-names => <x group>, destination-frame => $source-id).wait.result;
+#$source = $client.upload(@records, destination-frame => $source-id).wait.result;
 
 is $source.id, $source-id, 'remote frame preserves its requested key';
 is-deeply $source.shape, (3, 2), 'frame metadata reports dimensions';

@@ -122,5 +122,5 @@ say 'Frames';
 for $h2o.frames -> $f {
     say '÷' x 80;
     say $f.gist;
-    $f.preview.&to-pretty-table.say
+    $f.Array.head(12).&to-pretty-table.say
 }

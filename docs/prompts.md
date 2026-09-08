@@ -167,6 +167,12 @@ Proceed with implementing data frame(s)  identity, metadata, preview, summary, d
 For transformations, build a smaller explicit Rapids expression layer once the basic resource model is stable.
 ```
 
+*After I got the answer below.*
+
+```text
+Ok. Implement the lazy conversion.
+```
+
 ### Answer
 
 I have the Rapids layer scaffolded and am resolving its Raku type signature before live execution. I’ll preserve your newly added credits while completing the proxy and integration coverage.
@@ -200,3 +206,52 @@ my $adults = $frame
 All fast tests pass. The attached-cluster integration test also passed against `http://localhost:54321`, covering metadata, preview, summary, download, export, Rapids filtering/selection, and cleanup: [xt/02-frame-and-rapids-live.rakutest](/Volumes/Macintosh%20HD/Users/antonov/Raku-H2O-Client/xt/02-frame-and-rapids-live.rakutest).
 
 Your `resources/` directory was left untouched.
+
+---
+
+## Implementation of AT-POS for data frames
+
+```text
+For `H2O::Client::Frame` implement the method `AT-POS` that can take as argument integer index, list of indexes, range, `*`, or `Whatever`. 
+It can be based on the method `preview`.
+```
+
+---
+
+## Transform column values to factors/enums
+
+```text
+I want to have column conversions. 
+For example, a column of integers to be converted to factors. 
+Where it is best to do that? In the frame class or in the column class?
+```
+
+*After I got the answer below.*
+
+```text
+Ok. Implement the lazy conversion.
+```
+
+### Answer 
+
+Put column conversions on `H2O::Client::Column`.
+A conversion such as integer → factor is intrinsically a single-column transformation, so an API like this keeps the intent clear:
+
+```raku
+my $factor-column = $frame<age>.as-factor;
+```
+
+The method can return a new `Frame` (H2O transformations normally materialize a new server-side frame) or a Rapids expression that the caller explicitly materializes. I’d favor a lazy expression initially:
+
+```raku
+my $converted = $frame<age>.as-factor.materialize;
+```
+
+`Frame` should own frame-wide operations—selection, filtering, joins, adding/removing columns, or bulk conversion mappings such as `convert-columns(%(age => 'factor', score => 'real'))`.
+
+That gives a clean division:
+
+- `Column`: `as-factor`, `as-int`, `as-real`, `as-string`, possibly `replace-missing`.
+- `Frame`: operations involving multiple columns or the frame schema.
+
+A useful detail: conversion should not mutate the source frame implicitly. Return a derived frame/expression, with an optional explicit replacement operation later if desired.

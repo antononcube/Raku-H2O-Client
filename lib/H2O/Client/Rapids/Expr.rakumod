@@ -65,6 +65,7 @@ class H2O::Client::Rapids::Expr {
 
     method cbind(*@others) { self!operation('cbind', self, |@others) }
     method rbind(*@others) { self!operation('rbind', self, |@others) }
+    method as-factor() { self!operation('as.factor', self) }
     method sum(Bool:D :$remove-na = False) { self!operation('sum', self, $remove-na) }
     method mean(Bool:D :$remove-na = False) { self!operation('mean', self, 0, $remove-na) }
 

@@ -8,5 +8,6 @@ use-ok 'H2O::Client::Frame';
 use-ok 'H2O::Client::Column';
 use-ok 'H2O::Client::Job';
 use-ok 'H2O::Client::Rapids::Expr';
+use-ok 'H2O::Client::Rapids::GroupBy';
 
 done-testing;

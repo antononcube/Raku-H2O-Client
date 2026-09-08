@@ -1,13 +1,15 @@
 use v6.d;
 
 use JSON::Fast;
+use H2O::Client::Rapids::GroupBy;
 
 class H2O::Client::Rapids::Expr {
     has $.client is required;
     has Str:D $.ast is required;
+    has Str $.source-id;
 
     method frame(::?CLASS:U: $client, Str:D $id --> H2O::Client::Rapids::Expr) {
-        self.new(:$client, ast => self.identifier($id))
+        self.new(:$client, ast => self.identifier($id), source-id => $id)
     }
 
     method identifier(::?CLASS:U: Str:D $id --> Str:D) {
@@ -35,7 +37,7 @@ class H2O::Client::Rapids::Expr {
         die "Unsafe Rapids operator '$operator'"
             unless $operator ~~ /^ <[A..Za..z0..9_+*\/%.:<>=!&|?\-]>+ $/;
         my $args = @arguments.map({ self!argument($_) }).join(' ');
-        self.WHAT.new(:$!client, ast => "($operator $args)")
+        self.WHAT.new(:$!client, ast => "($operator $args)", source-id => $!source-id)
     }
 
     multi method col(Str:D $selector) { self!operation('cols', self, $selector) }
@@ -46,6 +48,10 @@ class H2O::Client::Rapids::Expr {
     }
     method where(H2O::Client::Rapids::Expr:D $predicate) {
         self!operation('rows', self, $predicate)
+    }
+    method group-by(*@columns --> H2O::Client::Rapids::GroupBy) {
+        @columns = @columns.head.List if @columns.elems == 1 && @columns.head ~~ Positional;
+        H2O::Client::Rapids::GroupBy.new(source => self, by => @columns)
     }
 
     method add($value) { self!operation('+', self, $value) }

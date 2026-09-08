@@ -24,6 +24,7 @@
     "H2O::Client::Frame": "lib/H2O/Client/Frame.rakumod",
     "H2O::Client::Job": "lib/H2O/Client/Job.rakumod",
     "H2O::Client::Rapids::Expr": "lib/H2O/Client/Rapids/Expr.rakumod",
+    "H2O::Client::Rapids::GroupBy": "lib/H2O/Client/Rapids/GroupBy.rakumod",
     "H2O::Client::Transport": "lib/H2O/Client/Transport.rakumod"
   },
   "resources": [],

@@ -6,7 +6,12 @@ use H2O::Client;
 class RapidsTransport {
     has %.last-post is rw;
     method encode($value) { uri_encode_component($value.Str) }
-    method get($path, *%options) { {} }
+    method get($path, *%options) {
+        return %(frames => [%(rows => 2, num_columns => 3, columns => [
+            %(label => 'region'), %(label => 'year'), %(label => 'revenue')
+        ])]) if $path eq '/3/Frames/source.hex/light';
+        {}
+    }
     method post($path, :%content = %(), *%options) {
         %!last-post = :$path, :%content;
         return %(session_key => 'session-1') if $path eq '/4/sessions';
@@ -26,6 +31,11 @@ is H2O::Client::Column.new(:$frame, name => 'age').as-factor.ast,
     '(as.factor (cols source.hex "age"))', 'column factor conversion is a lazy Rapids expression';
 is $frame.select(<age income>).ast,
     '(cols_py source.hex ["age" "income"])', 'selection is a lazy expression';
+my $grouped = $frame.expression.group-by(<region year>);
+isa-ok $grouped, H2O::Client::Rapids::GroupBy, 'grouping returns a lazy builder';
+is $grouped.count.mean('revenue').expression.ast,
+    '(GB source.hex [0 1] nrow 0 "all" mean 2 "all")',
+    'grouping builds a lazy Rapids aggregation expression';
 
 my $result = $frame.expression.add(1).materialize('result.hex');
 isa-ok $result, H2O::Client::Frame, 'materializing expression returns a frame proxy';

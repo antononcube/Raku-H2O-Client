@@ -309,3 +309,22 @@ my $result = $frame.expression
 `group-by` returns a mutable lazy builder supporting `count`, `mean`, `sum`, `min`, and `max`; `.expression`, `.evaluate`, or `.materialize` compiles it into H2O’s `GB` Rapids expression. Named columns are resolved to H2O column indexes at compilation.
 
 Also updated [Expr.rakumod](../lib/H2O/Client/Rapids/Expr.rakumod), package metadata, and grouping tests. All tests pass.
+
+----
+
+## Import files (from URLs)
+
+```text
+Implement the method import-file to produce a data frame job if the argument "job" is true. 
+Call self.data-parse-setup and self.data-parse as it is done in upload-file. 
+Do the appropriate refactoring between the two functions. 
+Is there a better, more direct way using H2O.ai's REST API ?
+```
+
+### Answer
+
+[...]
+
+H2O-3 has no one-call REST endpoint that both imports server-visible files and creates a parsed frame. 
+The standard REST flow is exactly `GET /3/ImportFiles` → `POST /3/ParseSetup` → `POST /3/Parse`; 
+skipping setup is only practical when every parse setting is already known.

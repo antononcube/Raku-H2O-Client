@@ -1,0 +1,55 @@
+use v6.d;
+use Test;
+use URI::Encode;
+use H2O::Client;
+use H2O::Client::Job;
+
+class ImportTransport {
+    has @.calls;
+
+    method encode($value) { uri_encode_component($value.Str) }
+    method get($path, :%query = %(), :$raw = False) {
+        @!calls.push: %(method => 'GET', :$path, :%query, :$raw);
+        return %(destination_frames => <nfs://data/a.csv nfs://data/b.csv>)
+            if $path eq '/3/ImportFiles';
+        die "Unexpected GET $path";
+    }
+    method post($path, :%content = %(), *%rest) {
+        @!calls.push: %(method => 'POST', :$path, :%content, |%rest);
+        return %(source_frames => [%(name => 'nfs://data/a.csv'), %(name => 'nfs://data/b.csv')],
+                  parse_type => 'CSV', separator => 44, number_columns => 2,
+                  single_quotes => False, check_header => 0,
+                  column_names => <a b>, column_types => <Numeric Numeric>)
+            if $path eq '/3/ParseSetup';
+        return %(job => %(key => %(name => 'parse-job'), dest => %(name => 'imported.hex', type => 'Key<Frame>'),
+                           status => 'RUNNING', progress => 0))
+            if $path eq '/3/Parse';
+        die "Unexpected POST $path";
+    }
+}
+
+my $transport = ImportTransport.new;
+my $client = H2O::Client.new('http://example.test:1234', :$transport);
+
+my $imported = $client.import-file('/server/data/*.csv');
+is-deeply $imported<destination_frames>, <nfs://data/a.csv nfs://data/b.csv>,
+    'an import without :job returns the ImportFiles response';
+
+my $job = $client.import-file('/server/data/*.csv', :job,
+    destination-frame => 'imported.hex', column-names => <left right>, check_header => 1);
+isa-ok $job, H2O::Client::Job, 'an import with :job returns the parse job';
+is $job.id, 'parse-job', 'the parse job is retained';
+
+my @calls = $transport.calls;
+is @calls[0]<path>, '/3/ImportFiles', 'the server path is imported first';
+is-deeply @calls[0]<query>, %(path => '/server/data/*.csv'), 'the server path is sent as a query parameter';
+is @calls[2]<path>, '/3/ParseSetup', 'the imported keys are sent to ParseSetup';
+is-deeply @calls[2]<content><source_frames>, <nfs://data/a.csv nfs://data/b.csv>.Array,
+    'all imported files are included in parse setup';
+is @calls[3]<path>, '/3/Parse', 'the inferred setup is submitted to Parse';
+is-deeply @calls[3]<content><source_frames>, <nfs://data/a.csv nfs://data/b.csv>.Array,
+    'the setup source keys are submitted to Parse';
+is-deeply @calls[3]<content><column_names>, <left right>, 'explicit parse options override inferred setup';
+is @calls[3]<content><check_header>, 1, 'additional parse options are preserved';
+
+done-testing;

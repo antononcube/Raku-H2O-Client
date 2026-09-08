@@ -149,22 +149,44 @@ class H2O::Client {
         }).Array
     }
 
-    method import-file(Str:D $server-path) {
-        self.get('/3/ImportFiles', query => %(path => $server-path))
+    method import-file(Str:D $server-path,
+                       Bool:D :$job = False,
+                       Str :$destination-frame,
+                       :@column-names, :@column-types, *%parse-options
+                       ) {
+        my $imported = self.get('/3/ImportFiles', query => %(path => $server-path));
+        return $imported unless $job;
+
+        my @source-frames = ($imported<destination_frames> // []).map({
+            .<name> // .<key><name> // .<key> // $_
+        }).Array;
+        die 'H2O import response did not contain destination frames.' unless @source-frames.elems;
+        return self!parse-source-frames(@source-frames, :$destination-frame, :@column-names, :@column-types, |%parse-options)
     }
 
-    method upload-file(IO::Path:D $path, Str :$destination-frame,
+    method upload-file(IO::Path:D $path,
+                       Str :$destination-frame,
                        :@column-names, :@column-types, *%parse-options
                        --> H2O::Client::Job) {
-        die "Upload file does not exist: $path" unless $path.f;
+        die "Upload file does not exist: ⎡$path⎦." unless $path.f;
         my $uploaded = self.post('/3/PostFile', :file($path));
         my $source = $uploaded<destination_frame><name> //
                      $uploaded<destination_frame> // $uploaded<key><name>;
         die 'H2O upload response did not contain a destination frame.' unless $source.defined;
-        my $setup = self.data-parse-setup([$source,]);
+        return self!parse-source-frames([$source,], :$destination-frame, :@column-names, :@column-types, |%parse-options)
+    }
+
+    method !parse-source-frames(@source-frames,
+                                Str :$destination-frame,
+                                :@column-names, :@column-types, *%parse-options
+                                --> H2O::Client::Job) {
+        my $setup = self.data-parse-setup(@source-frames);
+        my @setup-sources = ($setup<source_frames> // @source-frames).map({
+            .<name> // .<key><name> // .<key> // $_
+        }).Array;
         my %props =
             destination_frame => ($destination-frame // "raku-{$*PID}-{now.Int}.hex"),
-            source_frames => [($setup<source_frames> // []).head<name> // $source],
+            source_frames => @setup-sources,
             parse_type => $setup<parse_type>, separator => $setup<separator>,
             number_columns => $setup<number_columns>,
             single_quotes => ($setup<single_quotes> // False),
@@ -190,7 +212,7 @@ class H2O::Client {
 
     multi method data-import(@records, *%options) { self.upload(@records, |%options) }
     multi method data-import(IO::Path:D $path, *%options) { self.upload-file($path, |%options) }
-    multi method data-import(Str:D $server-path) { self.import-file($server-path) }
+    multi method data-import(Str:D $server-path, *%options) { self.import-file($server-path, |%options) }
 
     method data-parse-setup(@source-frames) {
         self.post('/3/ParseSetup', content => %(source_frames => @source-frames))

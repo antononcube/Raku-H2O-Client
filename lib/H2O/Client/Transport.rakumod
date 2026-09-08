@@ -58,7 +58,7 @@ class H2O::Client::Transport {
     }
 
     method post(Str:D $path, :%content = %(), :$file, Bool:D :$raw = False) {
-        if $file.defined {
+        with $file {
             my $path-object = $file.IO;
             my $handle = $path-object.open(:r, :bin);
             LEAVE $handle.close;
@@ -73,8 +73,7 @@ class H2O::Client::Transport {
         my %wire = %content.map({
             .key => (.value ~~ Positional|Associative ?? to-json(.value) !! .value)
         });
-        self.request('POST', $path, content => %wire,
-            content-type => 'application/x-www-form-urlencoded', :$raw)
+        return self.request('POST', $path, content => %wire, content-type => 'application/x-www-form-urlencoded', :$raw)
     }
 
     method delete(Str:D $path) { self.request('DELETE', $path) }

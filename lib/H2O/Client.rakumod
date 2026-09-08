@@ -2,7 +2,6 @@ use v6.d;
 
 use JSON::Fast;
 use Data::Importers;
-use Data::Translators;
 use H2O::Client::Connector;
 use H2O::Client::Transport;
 use H2O::Client::Frame;
@@ -72,10 +71,13 @@ class H2O::Client {
     multi method jobs(Str:D $format) { self.jobs(:$format) }
     multi method jobs(Str:D :$format = 'summary') {
         my $response = self.get('/3/Jobs');
+
         return $response if $format.lc eq 'raw' || $format.lc eq 'asis';
+
         return ($response<jobs> // []).map({ H2O::Client::Job.from-response(self, $_) }).Array
-            if $format.lc eq 'objects' || $format.lc eq 'jobs';
-        ($response<jobs> // []).map({
+        if $format.lc eq 'objects' || $format.lc eq 'jobs';
+
+        return ($response<jobs> // []).map({
             %(id => (.<key><name> // .<key>),
               destination => (.<dest><name> // .<dest>),
               status => .<status>, progress => .<progress>,
@@ -86,7 +88,7 @@ class H2O::Client {
     method frame(Str:D $id, Bool:D :$refresh = False --> H2O::Client::Frame) {
         my $frame = H2O::Client::Frame.new(:client(self), :$id);
         $frame.refresh if $refresh;
-        $frame
+        return $frame
     }
 
     method rapids(H2O::Client::Rapids::Expr:D $expression, Str :$destination) {
@@ -116,11 +118,11 @@ class H2O::Client {
         return True unless $!rapids-session-id.defined;
         try self.delete("/4/sessions/{self.encode($!rapids-session-id)}");
         $!rapids-session-id = Nil;
-        True
+        return True
     }
 
     multi method frames(Str:D $format) {
-        given $format.lc {
+        return do given $format.lc {
             when 'raw'|'asis' { self.frames(:raw) }
             when 'summary'|'dataset' { self.frames(:summary) }
             default { self.frames }
@@ -134,7 +136,7 @@ class H2O::Client {
             self.frame($id.Str)
         }).Array;
         return @frames unless $summary;
-        @frames.map({ %(id => .id, rows => .nrow, columns => .ncol, names => .names, types => .types) }).Array
+        return @frames.map({ %(id => .id, rows => .nrow, columns => .ncol, names => .names, types => .types) }).Array
     }
 
     multi method models(Str:D $format) { self.models(:$format) }
@@ -142,7 +144,7 @@ class H2O::Client {
         my $response = self.get('/3/Models');
         return $response if $format.lc eq 'raw' || $format.lc eq 'asis';
         return ($response<models> // []).Array if $format.lc eq 'models' || $format.lc eq 'dataset';
-        ($response<models> // []).map({
+        return ($response<models> // []).map({
             %(id => (.<model_id><name> // .<model_id>), algo => .<algo>,
               algorithm => .<algo_full_name>, response-column => .<response_column_name>,
               mojo => .<have_mojo>, pojo => .<have_pojo>)
@@ -195,7 +197,7 @@ class H2O::Client {
             column_types => (@column-types.elems ?? @column-types !! $setup<column_types>),
             delete_on_done => True;
         %props{$_} = %parse-options{$_} for %parse-options.keys;
-        self.data-parse(%props)
+        return self.data-parse(%props)
     }
 
     method upload(@records,
@@ -215,7 +217,7 @@ class H2O::Client {
         die 'Cannot serialize records as CSV.' unless data-export($path.Str, $records-to-export, 'csv');
         %parse-options<check_header> //= 1;
         return self.upload-file($path, :$destination-frame, :@column-types, |%parse-options) if @column-names.elems;
-        self.upload-file($path, :$destination-frame, :@column-names, :@column-types, |%parse-options)
+        return self.upload-file($path, :$destination-frame, :@column-names, :@column-types, |%parse-options)
     }
 
     multi method data-import(@records, *%options) { self.upload(@records, |%options) }
@@ -239,6 +241,6 @@ class H2O::Client {
                          Str:D $predictions-frame --> H2O::Client::Frame) {
         self.post("/3/Predictions/models/{self.encode($model-id)}/frames/{self.encode($frame-id)}",
                   content => %(predictions_frame => $predictions-frame));
-        self.frame($predictions-frame)
+        return self.frame($predictions-frame)
     }
 }

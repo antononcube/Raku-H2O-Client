@@ -27,27 +27,27 @@ zef install https://github.com/antononcube/Raku-H2O-Client.git
 
 ## Setup
 
-1. Download the latest [H20 version](http://h2o-release.s3.amazonaws.com/h2o/rel-3.46.0/12/index.html).
+**1.** Download the latest [H20 version](http://h2o-release.s3.amazonaws.com/h2o/rel-3.46.0/12/index.html).
 
-2. Start in a OS-terminal application the H2O cluster with the shell command:
+**2.** Start in a OS-terminal application the H2O cluster with the shell command:
 
 ```
 java -jar h2o.jar
 ```
 
-3. In case that command give the message:
+**3.** In case that command give the message:
 
 > Only Java versions 8-17 are supported, system version is 22.0.2
 
-3.1. Check the available Java distributions with:
+**3.1.** Check the available Java distributions with:
 
 ```
 /usr/libexec/java_home -V
 ```
 
-3.2. Pick one with a version between 8-17 or download a one with one of these versions:
+**3.2.** Pick one with a version between 8-17 or download a one with one of these versions:
 
-3.3. Setup `JAVA_HOME` and run the command `java -jar h2o.jar` again. For example, on macOS:
+**3.3.** Setup `JAVA_HOME` and run the command `java -jar h2o.jar` again. For example, on macOS:
 
 ```
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home 
@@ -108,21 +108,31 @@ LEAVE $h2o.shutdown;
 `shutdown` stops only a process started by this client. Shutting down a cluster
 connected to externally requires the explicit `:cluster` option.
 
-----
+---
 
-## Tests
+## Workflows 
 
-Fast tests use mocked transport responses and do not require Java:
+For fully programmed workflows see the example Raku scripts:
 
-```console
-prove6 -Ilib t
-```
+- [classification.raku](https://github.com/antononcube/Raku-H2O-Client/blob/main/examples/classification.raku)
+- [clustering.raku](https://github.com/antononcube/Raku-H2O-Client/blob/main/examples/clustering.raku)
 
-Live integration tests are intentionally kept under `xt/`:
+Or the notebooks:
 
-```console
-H2O_JAR=/path/to/h2o.jar prove6 -Ilib xt
-```
+- [Classification-demo.ipynb](https://github.com/antononcube/Raku-H2O-Client/blob/main/docs/Classification-demo.ipynb)
+- [Data-manipulation-demo.ipynb](https://github.com/antononcube/Raku-H2O-Client/blob/main/docs/Data-manipulation-demo.ipynb)
 
-H2O 3.46 supports Java 8–17. If `java` on `PATH` is newer, set `H2O_JAVA`
-to the full path of a supported Java executable.
+
+---
+
+## References
+
+### Documentation, downloads
+
+[H2O1] H20.ai, [H2O-3 Documentation](https://docs.h2o.ai/h2o-3).
+
+[H2O2] H20.ai, [H20 Latest Stable Release](https://h2o-release.s3.amazonaws.com/h2o/latest_stable.html).
+
+### Packages
+
+[AAp1] Anton Antonov, [Data::Importers, Raku package](https://github.com/antononcube/Raku-Data-Importers), (2024-2026), [GitHub/antononcube](https://github.com/antononcube). 

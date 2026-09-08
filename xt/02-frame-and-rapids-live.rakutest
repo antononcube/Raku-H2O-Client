@@ -51,6 +51,9 @@ is-deeply $result.dimensions(:pairs), %(:2rows, :1columns), 'Rapids filter and s
 is-deeply $result.head(2).map(*<x>).Array, [2.0, 3.0],
     'Rapids result has expected values';
 
+is $source.preview.elems, @records.elems, 'expected preview length';
+is $source.Array.elems, @records.elems, 'expected Array length';
+
 ok $result.delete, 'derived frame can be deleted';
 ok !$result.exists, 'deleted derived frame is gone';
 $result = Nil;

@@ -62,6 +62,26 @@ class H2O::Client::Frame does Associative {
     method AT-KEY($name) { self.column($name.Str) }
     method EXISTS-KEY($name) { so self.names.first(* eq $name.Str) }
 
+    # Positional access materializes rows, while angle-bracket access remains
+    # column-oriented through AT-KEY.
+    multi method AT-POS(Int:D $index) {
+        my $offset = $index < 0 ?? self.nrow + $index !! $index;
+        return Nil unless 0 <= $offset < self.nrow;
+        self.preview(rows => 1, offset => $offset.UInt).head
+    }
+
+    multi method AT-POS(List:D $indices --> Array) {
+        $indices.map({ self.AT-POS($_) }).Array
+    }
+
+    multi method AT-POS(Range:D $indices --> Array) {
+        $indices.list.map({ self.AT-POS($_) }).Array
+    }
+
+    multi method AT-POS(Whatever --> Array) {
+        self.preview(rows => self.nrow)
+    }
+
     method preview(UInt:D :$rows = 10, UInt:D :$offset = 0, :$columns = Whatever --> Array) {
         my @all = self.names;
         my @wanted = $columns ~~ (Array:D | List:D | Seq:D) && $columns.elems ?? |$columns !! @all;

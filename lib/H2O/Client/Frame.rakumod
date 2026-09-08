@@ -23,12 +23,12 @@ class H2O::Client::Frame does Associative {
         %!metadata = ($response<frames> // []).head // {};
         $!loaded = True;
         $!deleted = False;
-        self
+        return self
     }
 
     method exists(--> Bool:D) {
         return False if $!deleted;
-        so try { self.refresh; True }
+        return so try { self.refresh; True }
     }
 
     method !ensure() { self.refresh unless $!loaded; %!metadata }
@@ -51,7 +51,7 @@ class H2O::Client::Frame does Associative {
     method column-metadata(Str:D $name) {
         my $column = (self!ensure<columns> // []).grep(*.defined).first(*<label> eq $name);
         die "Column '$name' does not exist in frame '$!id'." unless $column.defined;
-        $column
+        return $column
     }
 
     method column(Str:D $name --> H2O::Client::Column) {
@@ -67,7 +67,7 @@ class H2O::Client::Frame does Associative {
     multi method AT-POS(Int:D $index) {
         my $offset = $index < 0 ?? self.nrow + $index !! $index;
         return Nil unless 0 <= $offset < self.nrow;
-        self.preview(rows => 1, offset => $offset.UInt).head
+        return self.preview(rows => 1, offset => $offset.UInt).head
     }
 
     multi method AT-POS(List:D $indices --> Array) {
@@ -119,7 +119,7 @@ class H2O::Client::Frame does Associative {
             }
             @records.push(%record) if %record.elems;
         }
-        @records
+        return @records
     }
 
     method head(UInt:D $rows = 10 --> Array) { self.preview(:$rows) }
@@ -137,7 +137,7 @@ class H2O::Client::Frame does Associative {
 
     method summary(Str :$column) {
         my $base = "/3/Frames/{ $!client.encode($!id) }";
-        $column.defined
+        return $column.defined
             ?? $!client.get("$base/columns/{ $!client.encode($column) }/summary")
             !! $!client.get("$base/summary")
     }
@@ -145,7 +145,7 @@ class H2O::Client::Frame does Associative {
     method download(IO::Path:D $path, *%query --> IO::Path:D) {
         my $bytes = $!client.get('/3/DownloadDataset', query => %(frame_id => $!id, |%query), :raw);
         $path.spurt($bytes, :bin);
-        $path
+        return $path
     }
 
     method export(Str:D $server-path, *%options) {
@@ -153,14 +153,14 @@ class H2O::Client::Frame does Associative {
         my $response = $!client.post(
             "/3/Frames/{ $!client.encode($!id) }/export",
             content => %(path => $server-path, |%options));
-        ::('H2O::Client::Job').from-response($!client, $response)
+        return ::('H2O::Client::Job').from-response($!client, $response)
     }
 
     method delete() {
         $!client.delete("/3/Frames/{ $!client.encode($!id) }");
         $!deleted = True;
         $!loaded = False;
-        True
+        return True
     }
 
     method raw() { self.metadata }

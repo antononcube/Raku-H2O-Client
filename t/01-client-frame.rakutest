@@ -66,6 +66,12 @@ is @frames.head.AT-POS(0..1).elems, 2, 'range positional access materializes eve
 is @frames.head.AT-POS(*).elems, 3, 'Whatever positional access materializes all rows';
 is @frames.head.AT-POS(Whatever).elems, 3, 'Whatever type object selects all rows';
 
+subtest {
+    isa-ok @frames.head.Array, Array:D, 'is an array';
+    is @frames.head.Array.elems, 3, 'is of length 3';
+    is @frames.head.Array.all ~~ Map:D, True, 'all hashmaps';
+}, 'method Array gives an array of hashmaps';
+
 ok @frames.head.delete, 'frame can be deleted';
 ok $transport.calls.tail<path>.contains('iris%20hex'), 'frame IDs are URL encoded';
 

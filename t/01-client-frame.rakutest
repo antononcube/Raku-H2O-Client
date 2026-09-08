@@ -10,7 +10,18 @@ class FakeTransport {
         @!calls.push: %(method => 'GET', :$path, :%query, :$raw);
         return 'a,b\n1,2\n'.encode if $raw;
         return %(frames => [%(frame_id => %(name => 'iris hex'))]) if $path eq '/3/Frames';
-        return %(frames => [self.metadata.item]) if $path.starts-with('/3/Frames/iris%20hex');
+        if $path.starts-with('/3/Frames/iris%20hex') {
+            my %frame = self.metadata.item;
+            my $offset = (%query<row_offset> // 0).Int;
+            my $count = (%query<row_count> // 10).Int;
+            for %frame<columns>.grep(*.defined) -> %column {
+                for <data string_data> -> $key {
+                    next unless %column{$key}:exists;
+                    %column{$key} = (%column{$key} // [])[$offset ..^ $offset + $count].Array;
+                }
+            }
+            return %(frames => [%frame.item]);
+        }
         die "Unexpected GET $path";
     }
     method post($path, *%args) { @!calls.push: %(method => 'POST', :$path, |%args); {} }
@@ -47,6 +58,13 @@ my @preview = @frames.head.preview(rows => 2, columns => <species x>);
 is @preview.elems, 2, 'preview materializes the requested row count';
 is @preview[0]<species>, 'setosa', 'preview selects named columns';
 is @preview[1]<x>, 2e0, 'preview returns numeric values';
+
+is @frames.head[1]<x>, 2e0, 'integer positional access materializes one row';
+is-deeply @frames.head.AT-POS((0, 2))».<species>,
+    <setosa virginica>, 'list positional access preserves selector order';
+is @frames.head.AT-POS(0..1).elems, 2, 'range positional access materializes every row in range';
+is @frames.head.AT-POS(*).elems, 3, 'Whatever positional access materializes all rows';
+is @frames.head.AT-POS(Whatever).elems, 3, 'Whatever type object selects all rows';
 
 ok @frames.head.delete, 'frame can be deleted';
 ok $transport.calls.tail<path>.contains('iris%20hex'), 'frame IDs are URL encoded';

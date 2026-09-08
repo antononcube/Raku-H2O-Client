@@ -22,6 +22,8 @@ my $frame = $client.frame('source.hex');
 is $frame.identity, 'http://127.0.0.1:54321#source.hex', 'frame identity includes cluster and key';
 is $frame.expression.col('age').greater-than(18).ast,
     '(> (cols source.hex "age") 18)', 'column predicate has a safe Rapids AST';
+is H2O::Client::Column.new(:$frame, name => 'age').as-factor.ast,
+    '(as.factor (cols source.hex "age"))', 'column factor conversion is a lazy Rapids expression';
 is $frame.select(<age income>).ast,
     '(cols_py source.hex ["age" "income"])', 'selection is a lazy expression';
 

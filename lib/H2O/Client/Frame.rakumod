@@ -132,6 +132,8 @@ class H2O::Client::Frame does Associative {
         self.preview(:$rows, offset => (self.nrow - $rows max 0).UInt)
     }
 
+    multi method Array(H2O::Client::Frame:D: --> Array:D) { self.AT-POS(*) }
+
     method expression(--> H2O::Client::Rapids::Expr) {
         H2O::Client::Rapids::Expr.frame($!client, $!id)
     }

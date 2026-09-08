@@ -30,6 +30,7 @@ my @field-names = <Age Sex PClass Survived>;
 
 my @dsTraining = select-columns(@dsExample, @field-names);
 
+# Make numeric (factorize) the columns of interest ("Age" and "Survived" are numerical already)
 @dsTraining = @dsTraining.map({
     $_<PClass> = $_<PClass> ~~ /^ \d / ?? $_<PClass>.substr(0,1).Int !! -1;
     $_<Sex> = $_<Sex> eq 'female' ?? 0 !! 1;
@@ -37,7 +38,7 @@ my @dsTraining = select-columns(@dsExample, @field-names);
 
 .say for @dsTraining.head(10);
 
-say dimensions(@dsTraining);
+say 'dimensions(@dsTraining) => ', dimensions(@dsTraining);
 
 say "Training:";
 records-summary(@dsTraining, :@field-names);
@@ -103,8 +104,11 @@ say "K-means model: $model-id";
 my $predictions = $h2o.model-predict(
         $model-id, $training-frame.id, "{$prefix}-predictions.hex");
 
-say 'Cluster assignments:';
+say 'Cluster assignments sample:';
 .say for $predictions.preview;
+
+say 'Number of items per cluster:';
+say $predictions.Array.map(*<predict>).Bag;
 
 #====================================================================================================
 say '=' x 100;

@@ -9,7 +9,7 @@ class RapidsTransport {
     method get($path, *%options) {
         return %(frames => [%(rows => 2, num_columns => 3, columns => [
             %(label => 'region'), %(label => 'year'), %(label => 'revenue')
-        ])]) if $path eq '/3/Frames/source.hex/light';
+        ]),],) if $path eq '/3/Frames/source.hex/light';
         {}
     }
     method post($path, :%content = %(), *%options) {

@@ -1,43 +1,42 @@
 {
-  "name": "H2O::Client",
-  "description": "Client for the open-source, distributed in-memory machine learning platform H2O (https://h2o.ai).",
-  "version": "0.0.1",
-  "perl": "6.d",
-  "authors": [
-    "Anton Antonov"
-  ],
-  "auth": "zef:antononcube",
-  "depends": [
-    "HTTP::Tiny:ver<0.2.5+>",
-    "JSON::Fast:ver<0.17+>",
-    "URI::Encode",
-    "Data::Importers:ver<0.1.7+>",
-    "Data::Translators:ver<0.1.13+>"
-  ],
-  "build-depends": [],
-  "test-depends": ["Test"],
-  "provides": {
-    "H2O::Client": "lib/H2O/Client.rakumod",
-    "H2O::Client::Column": "lib/H2O/Client/Column.rakumod",
-    "H2O::Client::Connector": "lib/H2O/Client/Connector.rakumod",
-    "H2O::Client::Exception": "lib/H2O/Client/Exception.rakumod",
-    "H2O::Client::Frame": "lib/H2O/Client/Frame.rakumod",
-    "H2O::Client::Job": "lib/H2O/Client/Job.rakumod",
-    "H2O::Client::Rapids::Expr": "lib/H2O/Client/Rapids/Expr.rakumod",
-    "H2O::Client::Rapids::GroupBy": "lib/H2O/Client/Rapids/GroupBy.rakumod",
-    "H2O::Client::Transport": "lib/H2O/Client/Transport.rakumod"
-  },
-  "resources": [],
-  "license": "Apache-License-2.0",
-  "tags": [
-    "ai",
-    "h2o",
-    "h2o 3 rest api",
-    "h2o.ai",
-    "api",
-    "rest service",
-    "rest"
-  ],
-  "api": "0",
-  "source-url": "https://github.com/antononcube/Raku-H2O-Client"
+    "name": "H2O::Client",
+    "description": "Client for the open-source, distributed in-memory machine learning platform H2O (https://h2o.ai).",
+    "version": "0.0.2",
+    "authors": [
+        "Anton Antonov"
+    ],
+    "auth": "zef:antononcube",
+    "depends": [
+        "HTTP::Tiny:ver<0.2.5+>",
+        "JSON::Fast:ver<0.17+>",
+        "URI::Encode",
+        "Data::Importers:ver<0.1.7+>"
+    ],
+    "build-depends": [],
+    "test-depends": [
+        "Test"
+    ],
+    "provides": {
+        "H2O::Client": "lib/H2O/Client.rakumod",
+        "H2O::Client::Column": "lib/H2O/Client/Column.rakumod",
+        "H2O::Client::Connector": "lib/H2O/Client/Connector.rakumod",
+        "H2O::Client::Exception": "lib/H2O/Client/Exception.rakumod",
+        "H2O::Client::Frame": "lib/H2O/Client/Frame.rakumod",
+        "H2O::Client::Job": "lib/H2O/Client/Job.rakumod",
+        "H2O::Client::Rapids::Expr": "lib/H2O/Client/Rapids/Expr.rakumod",
+        "H2O::Client::Rapids::GroupBy": "lib/H2O/Client/Rapids/GroupBy.rakumod",
+        "H2O::Client::Transport": "lib/H2O/Client/Transport.rakumod"
+    },
+    "license": "Apache-License-2.0",
+    "tags": [
+        "ai",
+        "h2o",
+        "h2o-3",
+        "h2o.ai",
+        "api",
+        "rest service",
+        "rest"
+    ],
+    "api": "0",
+    "source-url": "https://github.com/antononcube/Raku-H2O-Client"
 }

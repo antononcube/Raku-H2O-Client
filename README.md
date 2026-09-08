@@ -1,7 +1,11 @@
 # Raku-H2O-Client
 
-Raku REST client for the open-source, distributed in-memory machine-learning
-platform [H2O-3](https://h2o.ai/).
+
+[![MacOS](https://github.com/antononcube/Raku-H2O-Client/actions/workflows/macos.yml/badge.svg)](https://github.com/antononcube/Raku-H2O-Client/actions/workflows/macos.yml)
+[![Linux](https://github.com/antononcube/Raku-H2O-Client/actions/workflows/linux.yml/badge.svg)](https://github.com/antononcube/Raku-H2O-Client/actions/workflows/linux.yml)
+[![Win64](https://github.com/antononcube/Raku-H2O-Client/actions/workflows/windows.yml/badge.svg)](https://github.com/antononcube/Raku-H2O-Client/actions/workflows/windows.yml)
+
+Raku REST client for the open-source, distributed in-memory machine-learning platform [H2O-3](https://h2o.ai/).
 
 ---
 

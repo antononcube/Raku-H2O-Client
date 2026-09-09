@@ -73,12 +73,6 @@ say $frame.names;
 say $frame<group>.type; # column proxy
 say $frame.head(2);     # explicitly download a small preview
 ```
-```
-# (2 2)
-# [group x]
-# string
-# [{group => a, x => 1} {group => b, x => 2}]
-```
 
 `H2O::Client::Frame` is a lightweight handle to a server-side frame. Its
 identity is the H2O frame key; metadata is fetched lazily and cached. Use
@@ -103,9 +97,6 @@ my $heavy = $frame
         .select(<name mass homeworld>)
         .materialize('starwars-heavy3.hex');
 ```
-```
-# H2O::Frame<starwars-heavy3.hex>[42 × 3]
-```
 
 The initial layer supports column selection, row filtering, arithmetic,
 comparisons, boolean operations, `cbind`, `rbind`, `sum`, and `mean`. It opens
@@ -114,10 +105,10 @@ a long-running process is no longer necessary.
 
 To start a local cluster:
 
-```raku
+```raku, eval=FALSE
 my $h2o = H2O::Client.new;
 $h2o.init(jar-path => '/path/to/h2o.jar', jvm-opts => <-Xmx4g>);
-$h2o.shutdown;
+LEAVE $h2o.shutdown;
 ```
 
 `shutdown` stops only a process started by this client. Shutting down a cluster
